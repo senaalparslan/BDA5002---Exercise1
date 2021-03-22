@@ -1,0 +1,157 @@
+---
+title: "Exercise - 1"
+output: html_notebook
+author: Sena Alparslan
+---
+
+Firstly, I import data using read_csv function.
+
+```{r}
+library(readr)
+dfSales <- read_csv("/Users/SENA/Desktop/EuropeanSales.csv")
+dfSales
+```
+
+I check columns attributes.
+
+```{r}
+attributes(dfSales)
+```
+
+I plot correlation matric for numeric columns using corrplot. It shows between SalesPerCapita and GDPperHead is strong correlation. ComputerSalesDependant that is also our target variable, and Population is the strongest correlation of them.
+
+```{r}
+cor(dfSales[, sapply(dfSales, is.numeric)])
+
+library(corrplot)
+cor <- dfSales[, sapply(dfSales, is.numeric)]
+cor <- cor[complete.cases(cor), ]
+correlation_matrix <- cor(cor, method = "spearman")
+corrplot(correlation_matrix, method="color")
+
+#  SalesPerCapita  - GDPperHead 
+cor(dfSales$SalesPerCapita,dfSales$GDPperHead)
+
+#ComputerSales - Population
+cor(dfSales$ComputerSales,dfSales$Population)
+```
+
+```{r}
+boxplot(SalesPerCapita~GDPperHead,data=dfSales, main="SalesPerCapita/GDPperHead Box Plot",
+   xlab="SalesPerCapita", ylab="GDPperHead")
+
+library(dplyr)
+
+filtered_data <- dfSales %>% mutate(id = row_number())
+train <- filtered_data %>% sample_frac(.8) 
+test  <- anti_join(filtered_data, train) 
+
+#Stepwise using AIC --Daha iyi
+
+null <- lm(SalesPerCapita~1, data = train)
+full <- lm(SalesPerCapita ~ Population + GDPperHead + UnemploymentRate + EducationSpending + ComputerSales, data = train)
+
+step(null, scope =list(lower=null, upper= full), direction = "both")
+
+model_SalesPerCapita_AIC <- lm(formula = SalesPerCapita ~ GDPperHead + EducationSpending, data = train)
+
+summary_model_1 <- summary(model_SalesPerCapita_AIC)
+mse_1 <- summary_model_1$sigma^2
+r_sq_1 <- summary_model_1$r.squared
+adj_r_sq_1 <- summary_model_1$adj.r.squared
+
+summary_model_1
+
+#Stepwise using BIC
+
+null <- lm(SalesPerCapita~1, data = train)
+full <- lm(SalesPerCapita ~ Population + GDPperHead + UnemploymentRate + EducationSpending + ComputerSales, data = train)
+
+n=dim(train[1])
+step(null, scope =list(lower=null, upper= full), k=log(n), direction = "both")
+
+model_SalesPerCapita_BIC <- lm(formula = SalesPerCapita ~ GDPperHead + Population, data = train)
+
+summary_model_2 <- summary(model_SalesPerCapita_BIC)
+mse_2 <- summary_model_2$sigma^2
+r_sq_2 <- summary_model_2$r.squared
+adj_r_sq_2 <- summary_model_2$adj.r.squared
+
+summary_model_2
+
+#Best subset regression method
+library(leaps)
+best_fit_model <- regsubsets (SalesPerCapita ~ Population + GDPperHead + UnemploymentRate + EducationSpending + ComputerSales,data = train,  nbest = 1, nvmax = 4)
+
+summary(best_fit_model)
+
+plot(best_fit_model, scale="bic")
+
+model_SalesPerCapita_BestSubset<- lm(formula = SalesPerCapita ~ GDPperHead , data = train)
+
+summary_model_3 <- summary(model_SalesPerCapita_BestSubset)
+mse_3 <- summary_model_3$sigma^2
+r_sq_3 <- summary_model_3$r.squared
+adj_r_sq_3 <- summary_model_3$adj.r.squared
+
+summary_model_3
+
+
+######################################
+
+#Stepwise using AIC
+
+null <- lm(ComputerSales~1, data = train)
+full <- lm(ComputerSales ~ Population + GDPperHead + UnemploymentRate + EducationSpending + SalesPerCapita, data = train)
+
+step(null, scope =list(lower=null, upper= full), direction = "both")
+
+model_ComputerSales_AIC <- lm(formula = ComputerSales ~ Population + SalesPerCapita, data = train)
+
+summary_model_4 <- summary(model_ComputerSales_AIC)
+mse_4 <- summary_model_4$sigma^2
+r_sq_4 <- summary_model_4$r.squared
+adj_r_sq_4 <- summary_model_4$adj.r.squared
+
+summary_model_4
+
+#Stepwise using BIC
+
+n=dim(train[1])
+step(null, scope =list(lower=null, upper= full), k=log(n), direction = "both")
+
+model_ComputerSales_BIC <- lm(formula = ComputerSales ~ Population + GDPperHead + SalesPerCapita, 
+    data = train)
+
+summary_model_5 <- summary(model_ComputerSales_BIC)
+mse_5 <- summary_model_5$sigma^2
+r_sq_5 <- summary_model_5$r.squared
+adj_r_sq_5 <- summary_model_5$adj.r.squared
+
+summary_model_5
+
+#Best subset regression method
+library(leaps)
+best_fit_model <- regsubsets (ComputerSales ~ Population + GDPperHead + UnemploymentRate + EducationSpending + SalesPerCapita,data = train,  nbest = 1, nvmax = 4)
+
+summary(best_fit_model)
+
+plot(best_fit_model, scale="bic")
+
+model_ComputerSales_BEST <- lm(formula = ComputerSales ~ Population + GDPperHead + SalesPerCapita + UnemploymentRate, data = train)
+
+summary_model_6 <- summary(model_ComputerSales_BEST)
+mse_6 <- summary_model_6$sigma^2
+r_sq_6 <- summary_model_6$r.squared
+adj_r_sq_6 <- summary_model_6$adj.r.squared
+
+summary_model_6
+
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+
